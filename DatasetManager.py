@@ -33,14 +33,14 @@ class DatasetManager:
         self.__end_time = datetime(year=end_year, month=end_month, day=end_day)
         print(site + ', ' + api_token + ', ' + str(self.__start_time) + ', ' + str(self.__end_time))
 
-        __sessions = dataset.get_sessions_by_time(self.__start_time, self.__end_time)
+        sessions = dataset.get_sessions_by_time(self.__start_time, self.__end_time)
 
         flag_key = True
         key_list = []
         value_list = []
 
-        print('---------------------------------------- Loading ACN Dataset ----------------------------------------')
-        for index, session in enumerate(__sessions):
+        print('--------------------------------------- Loading ACN Dataset ---------------------------------------')
+        for index, session in enumerate(sessions):
             temp_list = list(session.values())
             for key in session.keys():
                 if flag_key:
@@ -89,7 +89,7 @@ class DatasetManager:
         time_tick = attack_sim_sec / normal_sim_sec
         return time_tick
 
-    def get_normal_auth_time_delta(self, attack_sim_sec, cof_sleep):
+    def get_normal_auth_time_delta(self, attack_sim_sec):
         sim_start_seconds = time.mktime(self.__start_time.timetuple())
         sim_end_seconds = time.mktime(self.__end_time.timetuple())
         normal_sim_sec = sim_end_seconds - sim_start_seconds
@@ -99,13 +99,12 @@ class DatasetManager:
         sec_delta_list = []
         for ev_auth_seconds in sim_normal_ev_seconds_list:
             sec_delta = ev_auth_seconds - sim_start_seconds
-            sec_delta_list.append(sec_delta * time_tick * cof_sleep)
+            sec_delta_list.append(sec_delta * time_tick)
 
         last_delta = 0
         last_seconds = sim_normal_ev_seconds_list[len(sim_normal_ev_seconds_list) - 1]
         if sim_end_seconds > last_seconds:
             last_delta = sim_end_seconds - sim_normal_ev_seconds_list[len(sim_normal_ev_seconds_list) - 1]
             last_delta *= time_tick
-            last_delta *= cof_sleep
 
         return sec_delta_list, last_delta

@@ -1,11 +1,9 @@
-import json
-import pickle
-import time
-from datetime import datetime
-import pandas as pd
-from matplotlib import pyplot as plt
 
+import json
+import pandas as pd
 import AttackConfig
+
+from datetime import datetime
 
 
 class DataSave:
@@ -15,10 +13,12 @@ class DataSave:
     __acn_data = []
     __acn_data_field_name_list = []
     __cs_id_pid_list = []
+    __mean = 0
+    __std = 0
 
     @classmethod
-    def save_attack_configuration(cls, attack_scenario, attack_ev_count):
-        temp_list = [attack_scenario, attack_ev_count]
+    def save_attack_configuration(cls, attack_scenario, attack_ev_min_count, attack_ev_max_count):
+        temp_list = [attack_scenario, attack_ev_min_count, attack_ev_max_count]
         df = pd.DataFrame(temp_list)
         df.to_csv('./output/attack_config.csv', index=False)
 
@@ -42,12 +42,14 @@ class DataSave:
         cls.__ev_installation_list.append(data_list)
 
     @classmethod
-    def __save_cs_id_and_pid(cls):
-        df = pd.DataFrame(cls.__cs_id_pid_list, columns=['CS ID', 'CS PID'])
-        df.to_csv('./output/cs_id_pid.csv', index=False)
+    def save_all_data(cls, scenario, charging_schedule_list, ev_count_dict, guassian_attack_count_dict,
+                      random_attack_on_off, guassian_heuristic_on_off):
+        attack_mode_str = 'random_attack_on_off: ' + str(random_attack_on_off) + ', '
+        attack_mode_str += 'guassian_heuristic_on_off: ' + str(guassian_heuristic_on_off)
+        f = open('./output/attack_mode.txt', 'w')
+        f.write(attack_mode_str)
+        f.close()
 
-    @classmethod
-    def save_all_data(cls, scenario, charging_schedule_list):
         df = pd.DataFrame(cls.__acn_data)
         df.columns = cls.__acn_data_field_name_list
         df.to_csv('./output/acn_data.csv', index=False)
@@ -60,7 +62,8 @@ class DataSave:
         df.columns = ['Process Order', 'Session ID', 'CS Id', 'HEX EV ID', 'HEX Key', 'Installation']
         df.to_csv('./output/ev_installation.csv', index=False)
 
-        cls.__save_cs_id_and_pid()
+        df = pd.DataFrame(cls.__cs_id_pid_list, columns=['CS ID', 'CS PID'])
+        df.to_csv('./output/cs_id_pid.csv', index=False)
 
         temp_list = []
         for key, values in cls.__authentication_result_dict.items():
@@ -85,7 +88,6 @@ class DataSave:
         df.columns = ['Session ID', 'CS ID', 'Timestamp', 'Authentication', 'Installation', 'Type', 'Date_Time']
         df.to_csv('./output/authentication_results.csv', index=False)
 
-        print('-------------------------------------- Saving Packet Sequence --------------------------------------')
         if scenario == AttackConfig.AttackConfig.attack_scenario_list(0):
             sec_delta_dict = cls.__calculate_normal_auth_time_delta(charging_schedule_list)
             f = open('./output/normal_time_diff.txt', 'w')
@@ -96,6 +98,24 @@ class DataSave:
             json.dump(sec_delta_dict, f, indent=4)
 
         f.close()
+
+        f = open('./output/ev_count.txt', 'w')
+        json.dump(ev_count_dict, f, indent=4)
+        f.close()
+
+        f = open('./output/gaussian_attack_count.txt', 'w')
+        json.dump(guassian_attack_count_dict, f, indent=4)
+        f.close()
+
+        f = open('./output/mean_std.txt', 'w')
+        mean_std_str = 'mean: ' + str(cls.__mean) + ', std: ' + str(cls.__std)
+        f.write(mean_std_str)
+        f.close()
+
+    @classmethod
+    def save_mean_std(cls, mean, std):
+        cls.__mean = mean
+        cls.__std = std
 
     @classmethod
     def save_acn_data(cls, data_list, key_list):

@@ -31,13 +31,17 @@ def multi_process_work(param_cs_id, param_conn, param_charging_schedule, param_a
 
 def parameter_setting():
     # ['no attack', 'correct ID', 'wrong ID', 'wrong ev timestamp', 'wrong cs timestamp']
-    scenario = AttackConfig.attack_scenario_list(0)
-    attack_ev_random_count_min = 10
-    attack_ev_random_count_max = 100
-    start_date = datetime(year=2018, month=9, day=5)
-    end_date = datetime(year=2018, month=9, day=6)
-    cof_sleep = 1.0
-    ret_param_list = [scenario, attack_ev_random_count_min, attack_ev_random_count_max, start_date, end_date, cof_sleep]
+    scenario_index = 3
+    _random_attack_on_off = False
+    _guassian_heuristic_on_off = True
+    start_date = datetime(year=2019, month=9, day=5)
+    end_date = datetime(year=2020, month=9, day=6)
+
+    scenario = AttackConfig.attack_scenario_list(scenario_index)
+    _attack_ev_random_count_min = 100
+    _attack_ev_random_count_max = 100
+    ret_param_list = [scenario, _attack_ev_random_count_min, _attack_ev_random_count_max, start_date, end_date,
+                      _random_attack_on_off, _guassian_heuristic_on_off]
     return ret_param_list
 
 
@@ -69,7 +73,8 @@ if __name__ == "__main__":
 
     dataset = DatasetManager(start_sim_date.year, start_sim_date.month, start_sim_date.day,
                              end_sim_date.year, end_sim_date.month, end_sim_date.day)
-    _cof_sleep = param_list[5]
+    random_attack_on_off = param_list[5]
+    guassian_heuristic_on_off = param_list[6]
 
     unique_cs_id_list = dataset.get_unique_cs_id_list()
     unique_normal_ev_id_list = dataset.get_unique_normal_ev_id_list()
@@ -87,7 +92,7 @@ if __name__ == "__main__":
         # installation
         installation_phase = InstallationPhase(unique_cs_id_list, port, unique_normal_ev_id_list, ev_cs_session_id_list)
         installation_phase.install_css()
-        sec_delta_list, last_delta = dataset.get_normal_auth_time_delta(attack_sim_sec, _cof_sleep)
+        sec_delta_list, last_delta = dataset.get_normal_auth_time_delta(attack_sim_sec)
         installation_phase.install_normal_evs(sec_delta_list, attack_config.get_scenario())
         installation_phase.release_css()
         installation_phase.release_evs()
@@ -106,11 +111,25 @@ if __name__ == "__main__":
         sim_flag = multiprocessing.Manager().Event()
 
         charging_schedule_list = []
+
+        if guassian_heuristic_on_off:
+            guassian_attack_count_dict, mean, std = attack_config.get_normal_distribution(scheduled_charging_list)
+            DataSave.save_mean_std(mean, std)
+        else:
+            guassian_attack_count_dict = 0
+
+        ev_count_dict = {}
         for cs_id, conn in installation_phase.get_cs_connection_dict().items():
             charging_schedule = installation_phase.get_scheduled_charging_of_normal_evs(cs_id, scheduled_charging_list,
                                                                                         attack_config.get_scenario())
-            charging_schedule = attack_config.get_attack_scenario(charging_schedule)
+            charging_schedule, ev_count_dict = attack_config.get_attack_scenario(charging_schedule,
+                                                                                 random_attack_on_off,
+                                                                                 guassian_heuristic_on_off,
+                                                                                 guassian_attack_count_dict)
             charging_schedule_list.append(charging_schedule)
+
+        print('-------------------------------- CS ID: [Normal EVs, Attack EVs] --------------------------------')
+        print(ev_count_dict)
 
         start_sim_time = datetime.now()
         index = 0
@@ -147,7 +166,6 @@ if __name__ == "__main__":
         measurement.get_process_perf_top_branch().kill()
         measurement.get_process_perf_top_cycle().kill()
         measurement.terminate_perf()
-        Measurement.terminate_process(gs_pid)
         measurement.end_perf_stat_gs()
 
         record_list = []
@@ -158,12 +176,14 @@ if __name__ == "__main__":
                 print(str(index + 1), value)
 
         DataSave.save_ev_authentication_result(return_result_dict, return_pid_dict.items())
-        DataSave.save_all_data(attack_config.get_scenario(), charging_schedule_list)
+        DataSave.save_all_data(attack_config.get_scenario(), charging_schedule_list, ev_count_dict,
+                               guassian_attack_count_dict, random_attack_on_off, guassian_heuristic_on_off)
         DataSave.save_sim_time(sim_time_delta.total_seconds(), attack_config.get_scenario(), start_sim_date,
                                end_sim_date)
 
         print('-------------------------------------- Consumed Simulation Time --------------------------------------')
         print(sim_time_delta)
+        Measurement.terminate_process(gs_pid)
         print('\nEnd EV CS')
     else:  # parent process
         os.close(read_pipe)
@@ -177,3 +197,4 @@ if __name__ == "__main__":
         exit(0)
 
     print('End Program')
+

@@ -12,19 +12,19 @@ end_thread_flag = True
 
 def multi_process_work_perf_top_branch(param_pid):
     print('Perf Top Branch GS PID: ' + str(param_pid))
-    os.system('perf top -d 1 --show-total-period -e branch -p ' + str(param_pid) +
+    os.system('perf top -d 1 --show-total-period -U -e branch -p ' + str(param_pid) +
               ' --stdio > ./output/perf_top_branch.txt')
 
 
 def multi_process_work_perf_top_instruction(param_pid):
     print('Perf Top Instruction GS PID: ' + str(param_pid))
-    os.system('perf top -d 1 --show-total-period -e instructions -p ' + str(param_pid) +
+    os.system('perf top -d 1 --show-total-period -U -e instructions -p ' + str(param_pid) +
               ' --stdio > ./output/perf_top_instruction.txt')
 
 
 def multi_process_work_perf_top_cycle(param_pid):
     print('Perf Top Cycle GS PID: ' + str(param_pid))
-    os.system('perf top -d 1 --show-total-period -e cycles -p ' + str(param_pid) +
+    os.system('perf top -d 1 --show-total-period -U -e cycles -p ' + str(param_pid) +
               ' --stdio > ./output/perf_top_cycle.txt')
 
 
@@ -36,7 +36,7 @@ def multi_process_work_perf_record_all(param_pid):
 
 def multi_process_work_perf_stat_cs(param_cs_pid):
     print('Perf Stat Instruction CS PID: ' + str(param_cs_pid))
-    os.system('perf stat -p ' + str(param_cs_pid) + ' -I 100 -o ./output/cs_' + str(param_cs_pid) + '.txt')
+    os.system('perf stat -p ' + str(param_cs_pid) + ' -I 100 -o ./output/cs/cs_' + str(param_cs_pid) + '.txt')
 
 
 def multi_process_work_perf_stat_gs(param_gs_pid):
@@ -59,6 +59,8 @@ class Measurement:
         self.__return_pid_dict = return_pid_dict
         manager = multiprocessing.Manager()
         self.__pid_list = manager.list()
+        if not os.path.exists('./output/cs'):
+            os.mkdir('./output/cs')
 
     def get_process_perf_record_all(self):
         return self.__process_perf_record_all
