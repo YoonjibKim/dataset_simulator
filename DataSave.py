@@ -82,7 +82,6 @@ class DataSave:
             for inner_record in outer_record:
                 record_list = inner_record.split('|')
                 dual_record_list.append(record_list)
-                print(record_list)
 
         df = pd.DataFrame(dual_record_list)
         df.columns = ['Session ID', 'CS ID', 'Timestamp', 'Authentication', 'Installation', 'Type', 'Date_Time']

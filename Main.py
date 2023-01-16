@@ -31,18 +31,18 @@ def multi_process_work(param_cs_id, param_conn, param_charging_schedule, param_a
 
 def parameter_setting():
     # ['no attack', 'correct ID', 'wrong ID', 'wrong ev timestamp', 'wrong cs timestamp']
-    scenario_index = 0
+    scenario_index = 1
     _random_cs_attack_on_off = True
     _guassian_heuristic_on_off = True
 
     start_date = datetime(year=2019, month=9, day=5)
     end_date = datetime(year=2020, month=9, day=6)
-
-    scenario = AttackConfig.attack_scenario_list(scenario_index)
     _attack_ev_random_count_min = 2000
     _attack_ev_random_count_max = 2000
+    _max_profiling_count = 5
+    scenario = AttackConfig.attack_scenario_list(scenario_index)
     ret_param_list = [scenario, _attack_ev_random_count_min, _attack_ev_random_count_max, start_date, end_date,
-                      _random_cs_attack_on_off, _guassian_heuristic_on_off]
+                      _random_cs_attack_on_off, _guassian_heuristic_on_off, _max_profiling_count]
     return ret_param_list
 
 
@@ -76,6 +76,7 @@ if __name__ == "__main__":
                              end_sim_date.year, end_sim_date.month, end_sim_date.day)
     random_cs_attack_on_off = param_list[5]
     guassian_heuristic_on_off = param_list[6]
+    profiling_count = param_list[7]
 
     unique_cs_id_list = dataset.get_unique_cs_id_list()
     unique_normal_ev_id_list = dataset.get_unique_normal_ev_id_list()
@@ -120,6 +121,7 @@ if __name__ == "__main__":
             guassian_attack_count_dict = 0
 
         ev_count_dict = {}
+        charging_schedule_count_list = []
         for cs_id, conn in installation_phase.get_cs_connection_dict().items():
             charging_schedule = installation_phase.get_scheduled_charging_of_normal_evs(cs_id, scheduled_charging_list,
                                                                                         attack_config.get_scenario())
@@ -127,7 +129,16 @@ if __name__ == "__main__":
                                                                                  random_cs_attack_on_off,
                                                                                  guassian_heuristic_on_off,
                                                                                  guassian_attack_count_dict)
+            charging_schedule_count_list.append([cs_id, len(charging_schedule)])
             charging_schedule_list.append(charging_schedule)
+
+        charging_schedule_count_list.sort(key=lambda a: a[1], reverse=True)
+        profiling_target_cs_id_list = []
+        for count, target_cs_id in enumerate(charging_schedule_count_list):
+            if count == profiling_count:
+                break
+            else:
+                profiling_target_cs_id_list.append(target_cs_id[0])
 
         print('-------------------------------- CS ID: [Normal EVs, Attack EVs] --------------------------------')
         print(ev_count_dict)
@@ -139,22 +150,31 @@ if __name__ == "__main__":
                               args=(cs_id, conn, charging_schedule_list[index], attack_config, return_result_dict,
                                     return_pid_dict, sim_flag,))
             process.start()
-            measurement.start_perf_stat_cs(process.pid)
+            if cs_id in profiling_target_cs_id_list:
+                while True:
+                    if process.is_alive():
+                        break
+                measurement.start_perf_stat(process.pid, 'cs_stat')
+                measurement.start_perf_top(process.pid, 'cs_top', 'instructions')
+                measurement.start_perf_top(process.pid, 'cs_top', 'branch')
+                measurement.start_perf_top(process.pid, 'cs_top', 'cycles')
+                measurement.start_perf_record(process.pid, 'cs_record')
             index += 1
             process_list.append(process)
             if process_count == len(installation_phase.get_cs_connection_dict()) - 1:
-                measurement.start_perf_record_all(gs_pid)
-                measurement.start_perf_top_branch(gs_pid)
-                measurement.start_perf_top_cycle(gs_pid)
-                measurement.start_perf_top_instruction(gs_pid)
-                measurement.start_perf_stat_gs(gs_pid)
+                measurement.start_perf_stat(gs_pid, 'gs_stat')
+                measurement.start_perf_top(gs_pid, 'gs_top', 'instructions')
+                measurement.start_perf_top(gs_pid, 'gs_top', 'branch')
+                measurement.start_perf_top(gs_pid, 'gs_top', 'cycles')
+                measurement.start_perf_record(gs_pid, 'gs_record')
                 sim_flag.set()
+                print('Measuring Start!')
             else:
                 process_count += 1
 
         for process in process_list:
             process.join()
-            measurement.end_perf_stat_cs(process.pid)
+            measurement.end_perf_measurement(process.pid)
 
         process_list.clear()
 
@@ -162,12 +182,7 @@ if __name__ == "__main__":
         end_sim_time = datetime.now()
         sim_time_delta = end_sim_time - start_sim_time
 
-        measurement.get_process_perf_record_all().kill()
-        measurement.get_process_perf_top_instruction().kill()
-        measurement.get_process_perf_top_branch().kill()
-        measurement.get_process_perf_top_cycle().kill()
-        measurement.terminate_perf()
-        measurement.end_perf_stat_gs()
+        measurement.end_perf_measurement(gs_pid)
 
         record_list = []
         for key, values in return_result_dict.items():
@@ -184,7 +199,8 @@ if __name__ == "__main__":
 
         print('-------------------------------------- Consumed Simulation Time --------------------------------------')
         print(sim_time_delta)
-        Measurement.terminate_process(gs_pid)
+        Measurement.end_process(gs_pid)
+        Measurement.kill_perf_and_python()
         print('\nEnd EV CS')
     else:  # parent process
         os.close(read_pipe)
