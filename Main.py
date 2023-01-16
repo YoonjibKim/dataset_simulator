@@ -31,7 +31,7 @@ def multi_process_work(param_cs_id, param_conn, param_charging_schedule, param_a
 
 def parameter_setting():
     # ['no attack', 'correct ID', 'wrong ID', 'wrong ev timestamp', 'wrong cs timestamp']
-    scenario_index = 0
+    scenario_index = 1
     _random_cs_attack_on_off = True
     _guassian_heuristic_on_off = True
 
@@ -39,7 +39,7 @@ def parameter_setting():
     end_date = datetime(year=2020, month=9, day=6)
     _attack_ev_random_count_min = 2000
     _attack_ev_random_count_max = 2000
-    _max_profiling_count = 5
+    _max_profiling_count = 3
     scenario = AttackConfig.attack_scenario_list(scenario_index)
     ret_param_list = [scenario, _attack_ev_random_count_min, _attack_ev_random_count_max, start_date, end_date,
                       _random_cs_attack_on_off, _guassian_heuristic_on_off, _max_profiling_count]
@@ -200,6 +200,7 @@ if __name__ == "__main__":
         print('-------------------------------------- Consumed Simulation Time --------------------------------------')
         print(sim_time_delta)
         Measurement.end_process(gs_pid)
+        measurement.convert_perf_record_to_file()
         print('\nEnd EV CS')
     else:  # parent process
         os.close(read_pipe)
@@ -213,5 +214,6 @@ if __name__ == "__main__":
         exit(0)
 
     print('End Program')
-    Measurement.kill_perf_and_python()
+    measurement.kill_perf()
+    Measurement.kill_python()
 

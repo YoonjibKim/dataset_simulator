@@ -35,6 +35,7 @@ class Measurement:
     __process_perf_stat_dict = {}
     __process_perf_record_dict = {}
     __process_perf_top_dict = {}
+    __gs_pid = None
 
     def __init__(self, return_pid_dict):
         self.__return_pid_dict = return_pid_dict
@@ -53,12 +54,10 @@ class Measurement:
         if not os.path.exists('./output/gs_record'):
             os.mkdir('./output/gs_record')
 
-    @classmethod
-    def __choose_pid(cls, ps_list):
-        index = random.randint(0, len(ps_list))
-        return str(ps_list[index].pid)
-
     def start_perf_record(self, target_pid, _dir):
+        if _dir == 'gs_record':
+            self.__gs_pid = target_pid
+
         process_perf_record_all = Process(target=multi_process_work_perf_record, args=(target_pid, _dir))
         process_perf_record_all.start()
         self.__process_perf_record_dict[target_pid] = process_perf_record_all.pid
@@ -87,6 +86,15 @@ class Measurement:
             self.end_process(perf_pid)
             print('Record profiling on ' + str(target_pid) + ' has been terminated.')
 
+    def convert_perf_record_to_file(self):
+        for target_pid in self.__process_perf_record_dict.keys():
+            if target_pid == self.__gs_pid:
+                os.system('perf report -i ./output/gs_record/perf_record_' + str(target_pid) +
+                          ' > ./output/gs_record/perf_record_' + str(target_pid) + '.txt')
+            else:
+                os.system('perf report -i ./output/cs_record/perf_record_' + str(target_pid) +
+                          ' > ./output/cs_record/perf_record_' + str(target_pid) + '.txt')
+
     @classmethod
     def end_process(cls, pid, kill=True):
         while True:
@@ -101,6 +109,9 @@ class Measurement:
                 time.sleep(0.1)
 
     @classmethod
-    def kill_perf_and_python(cls):
-        subprocess.call('sudo pkill -x perf', shell=True)
+    def kill_python(cls):
         subprocess.call('sudo pkill -x python3.10', shell=True)
+
+    @classmethod
+    def kill_perf(cls):
+        subprocess.call('sudo pkill -x perf', shell=True)
