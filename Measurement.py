@@ -1,9 +1,6 @@
 import multiprocessing
 import os
-import random
-import signal
 import subprocess
-import time
 from multiprocessing import Process
 
 process_list = []
@@ -34,7 +31,9 @@ global_ev_auth_list = []
 class Measurement:
     __process_perf_stat_dict = {}
     __process_perf_record_dict = {}
-    __process_perf_top_dict = {}
+    __process_perf_top_instructions_dict = {}
+    __process_perf_top_cycles_dict = {}
+    __process_perf_top_branch_dict = {}
     __gs_pid = None
 
     def __init__(self, return_pid_dict):
@@ -60,31 +59,24 @@ class Measurement:
 
         process_perf_record_all = Process(target=multi_process_work_perf_record, args=(target_pid, _dir))
         process_perf_record_all.start()
-        self.__process_perf_record_dict[target_pid] = process_perf_record_all.pid
+        self.__process_perf_record_dict[target_pid] = process_perf_record_all
 
     def start_perf_top(self, target_pid, _dir, event):
         process_perf_top = Process(target=multi_process_work_perf_top, args=(target_pid, _dir, event))
         process_perf_top.start()
-        self.__process_perf_top_dict[target_pid] = process_perf_top.pid
+        if event == 'branch':
+            self.__process_perf_top_branch_dict[target_pid] = process_perf_top
+        elif event == 'instructions':
+            self.__process_perf_top_instructions_dict[target_pid] = process_perf_top
+        elif event == 'cycles':
+            self.__process_perf_top_cycles_dict[target_pid] = process_perf_top
+        else:
+            print('No event')
 
     def start_perf_stat(self, target_pid, _dir):
         process_perf_stat = Process(target=multi_process_work_perf_stat, args=(target_pid, _dir))
         process_perf_stat.start()
-        self.__process_perf_stat_dict[target_pid] = process_perf_stat.pid
-
-    def end_perf_measurement(self, target_pid):
-        if target_pid in self.__process_perf_top_dict:
-            perf_pid = self.__process_perf_top_dict[target_pid]
-            self.end_process(perf_pid)
-            print('Top profiling on ' + str(target_pid) + ' has been terminated.')
-        if target_pid in self.__process_perf_stat_dict:
-            perf_pid = self.__process_perf_stat_dict[target_pid]
-            self.end_process(perf_pid)
-            print('Stat profiling on ' + str(target_pid) + ' has been terminated.')
-        if target_pid in self.__process_perf_record_dict:
-            perf_pid = self.__process_perf_record_dict[target_pid]
-            self.end_process(perf_pid)
-            print('Record profiling on ' + str(target_pid) + ' has been terminated.')
+        self.__process_perf_stat_dict[target_pid] = process_perf_stat
 
     def convert_perf_record_to_file(self):
         for target_pid in self.__process_perf_record_dict.keys():
@@ -96,22 +88,9 @@ class Measurement:
                           ' > ./output/cs_record/perf_record_' + str(target_pid) + '.txt')
 
     @classmethod
-    def end_process(cls, pid, kill=True):
-        while True:
-            try:
-                if kill:
-                    os.kill(pid, signal.SIGKILL)
-                else:
-                    os.kill(pid, signal.SIGTERM)
-                break
-            except OSError:
-                print(str(pid) + ' is still alive!')
-                time.sleep(0.1)
-
-    @classmethod
-    def kill_python(cls):
-        subprocess.call('sudo pkill -x python3.10', shell=True)
+    def kill_process(cls, pid):
+        os.system('kill -9 ' + str(pid))
 
     @classmethod
     def kill_perf(cls):
-        subprocess.call('sudo pkill -x perf', shell=True)
+        os.system('pkill -x perf')

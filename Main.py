@@ -32,13 +32,13 @@ def multi_process_work(param_cs_id, param_conn, param_charging_schedule, param_a
 def parameter_setting():
     # ['no attack', 'correct ID', 'wrong ID', 'wrong ev timestamp', 'wrong cs timestamp']
     scenario_index = 1
-    _random_cs_attack_on_off = True
-    _guassian_heuristic_on_off = True
+    _random_cs_attack_on_off = False
+    _guassian_heuristic_on_off = False
 
     start_date = datetime(year=2019, month=9, day=5)
     end_date = datetime(year=2020, month=9, day=6)
-    _attack_ev_random_count_min = 2000
-    _attack_ev_random_count_max = 2000
+    _attack_ev_random_count_min = 100
+    _attack_ev_random_count_max = 100
     _max_profiling_count = 3
     scenario = AttackConfig.attack_scenario_list(scenario_index)
     ret_param_list = [scenario, _attack_ev_random_count_min, _attack_ev_random_count_max, start_date, end_date,
@@ -142,7 +142,6 @@ if __name__ == "__main__":
 
         print('-------------------------------- CS ID: [Normal EVs, Attack EVs] --------------------------------')
         print(ev_count_dict)
-
         start_sim_time = datetime.now()
         index = 0
         for cs_id, conn in installation_phase.get_cs_connection_dict().items():
@@ -154,6 +153,7 @@ if __name__ == "__main__":
                 while True:
                     if process.is_alive():
                         break
+
                 measurement.start_perf_stat(process.pid, 'cs_stat')
                 measurement.start_perf_top(process.pid, 'cs_top', 'instructions')
                 measurement.start_perf_top(process.pid, 'cs_top', 'branch')
@@ -174,15 +174,11 @@ if __name__ == "__main__":
 
         for process in process_list:
             process.join()
-            measurement.end_perf_measurement(process.pid)
 
-        process_list.clear()
-
+        Measurement.kill_perf()
         time.sleep(last_delta)
         end_sim_time = datetime.now()
         sim_time_delta = end_sim_time - start_sim_time
-
-        measurement.end_perf_measurement(gs_pid)
 
         record_list = []
         for key, values in return_result_dict.items():
@@ -199,7 +195,6 @@ if __name__ == "__main__":
 
         print('-------------------------------------- Consumed Simulation Time --------------------------------------')
         print(sim_time_delta)
-        Measurement.end_process(gs_pid)
         measurement.convert_perf_record_to_file()
         print('\nEnd EV CS')
     else:  # parent process
@@ -209,11 +204,9 @@ if __name__ == "__main__":
         wd.write(str(port) + ' ' + str(os.getpid()))
         wd.close()
         V2G_Network().grid_server(port)
-
         print('End Server')
         exit(0)
 
+    Measurement.kill_process(gs_pid)
     print('End Program')
-    measurement.kill_perf()
-    Measurement.kill_python()
 
