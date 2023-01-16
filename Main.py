@@ -31,7 +31,7 @@ def multi_process_work(param_cs_id, param_conn, param_charging_schedule, param_a
 
 def parameter_setting():
     # ['no attack', 'correct ID', 'wrong ID', 'wrong ev timestamp', 'wrong cs timestamp']
-    scenario_index = 1
+    scenario_index = 0
     _random_cs_attack_on_off = True
     _guassian_heuristic_on_off = True
 
@@ -200,7 +200,6 @@ if __name__ == "__main__":
         print('-------------------------------------- Consumed Simulation Time --------------------------------------')
         print(sim_time_delta)
         Measurement.end_process(gs_pid)
-        Measurement.kill_perf_and_python()
         print('\nEnd EV CS')
     else:  # parent process
         os.close(read_pipe)
@@ -214,4 +213,5 @@ if __name__ == "__main__":
         exit(0)
 
     print('End Program')
+    Measurement.kill_perf_and_python()
 

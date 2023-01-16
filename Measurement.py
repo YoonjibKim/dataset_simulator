@@ -102,5 +102,5 @@ class Measurement:
 
     @classmethod
     def kill_perf_and_python(cls):
-        subprocess.call('pkill -x perf', shell=True)
-        subprocess.call('pkill -x python3.10', shell=True)
+        subprocess.call('sudo pkill -x perf', shell=True)
+        subprocess.call('sudo pkill -x python3.10', shell=True)
