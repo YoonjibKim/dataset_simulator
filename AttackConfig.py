@@ -24,9 +24,9 @@ class AttackConfig:
     def get_scenario(self):
         return self.__attack_scenario
 
-    def __generate_random_normal_or_attack_sub_scenario(self, random_attack_on_off):
+    def __generate_random_normal_or_attack_sub_scenario(self, random_cs_attack_on_off):
         scenario = self.__attack_scenario
-        if random_attack_on_off:
+        if random_cs_attack_on_off:
             if self.__random_victim_cs:
                 choice_list = ['attack', 'normal']
                 scenario = random.choice(choice_list)
@@ -39,13 +39,13 @@ class AttackConfig:
         count = random.randrange(self.__attack_ev_min_count, self.__attack_ev_max_count + 1)
         return count
 
-    def get_attack_scenario(self, charging_schedule, random_attack_on_off,
+    def get_attack_scenario(self, charging_schedule, random_cs_attack_on_off,
                             guassian_heuristic_on_off, guassian_attack_count_dict):
 
         if self.__attack_scenario == self.__attack_scenario_list[0]:
             configuration = charging_schedule
         elif self.__attack_scenario == self.__attack_scenario_list[1]:
-            scenario = self.__generate_random_normal_or_attack_sub_scenario(random_attack_on_off)
+            scenario = self.__generate_random_normal_or_attack_sub_scenario(random_cs_attack_on_off)
             if scenario == 'attack':
                 attack_ev_id = charging_schedule[0][0]
                 victim_cs_id = charging_schedule[0][1]
@@ -68,7 +68,7 @@ class AttackConfig:
             else:
                 configuration = charging_schedule
         elif self.__attack_scenario == self.__attack_scenario_list[2]:
-            scenario = self.__generate_random_normal_or_attack_sub_scenario(random_attack_on_off)
+            scenario = self.__generate_random_normal_or_attack_sub_scenario(random_cs_attack_on_off)
             if scenario == 'attack':
                 attack_ev_id = 'ATTACK_EV'
                 victim_cs_id = charging_schedule[0][1]
@@ -91,7 +91,7 @@ class AttackConfig:
             else:
                 configuration = charging_schedule
         elif self.__attack_scenario == self.__attack_scenario_list[3]:
-            scenario = self.__generate_random_normal_or_attack_sub_scenario(random_attack_on_off)
+            scenario = self.__generate_random_normal_or_attack_sub_scenario(random_cs_attack_on_off)
             if scenario == 'attack':
                 attack_ev_id = charging_schedule[0][0]
                 victim_cs_id = charging_schedule[0][1]
@@ -115,7 +115,7 @@ class AttackConfig:
             else:
                 configuration = charging_schedule
         elif self.__attack_scenario == self.__attack_scenario_list[4]:
-            scenario = self.__generate_random_normal_or_attack_sub_scenario(random_attack_on_off)
+            scenario = self.__generate_random_normal_or_attack_sub_scenario(random_cs_attack_on_off)
             if scenario == 'attack':
                 attack_ev_id = charging_schedule[0][0]
                 victim_cs_id = charging_schedule[0][1]

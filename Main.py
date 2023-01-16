@@ -31,17 +31,18 @@ def multi_process_work(param_cs_id, param_conn, param_charging_schedule, param_a
 
 def parameter_setting():
     # ['no attack', 'correct ID', 'wrong ID', 'wrong ev timestamp', 'wrong cs timestamp']
-    scenario_index = 3
-    _random_attack_on_off = False
+    scenario_index = 0
+    _random_cs_attack_on_off = True
     _guassian_heuristic_on_off = True
+
     start_date = datetime(year=2019, month=9, day=5)
     end_date = datetime(year=2020, month=9, day=6)
 
     scenario = AttackConfig.attack_scenario_list(scenario_index)
-    _attack_ev_random_count_min = 100
-    _attack_ev_random_count_max = 100
+    _attack_ev_random_count_min = 2000
+    _attack_ev_random_count_max = 2000
     ret_param_list = [scenario, _attack_ev_random_count_min, _attack_ev_random_count_max, start_date, end_date,
-                      _random_attack_on_off, _guassian_heuristic_on_off]
+                      _random_cs_attack_on_off, _guassian_heuristic_on_off]
     return ret_param_list
 
 
@@ -73,7 +74,7 @@ if __name__ == "__main__":
 
     dataset = DatasetManager(start_sim_date.year, start_sim_date.month, start_sim_date.day,
                              end_sim_date.year, end_sim_date.month, end_sim_date.day)
-    random_attack_on_off = param_list[5]
+    random_cs_attack_on_off = param_list[5]
     guassian_heuristic_on_off = param_list[6]
 
     unique_cs_id_list = dataset.get_unique_cs_id_list()
@@ -123,7 +124,7 @@ if __name__ == "__main__":
             charging_schedule = installation_phase.get_scheduled_charging_of_normal_evs(cs_id, scheduled_charging_list,
                                                                                         attack_config.get_scenario())
             charging_schedule, ev_count_dict = attack_config.get_attack_scenario(charging_schedule,
-                                                                                 random_attack_on_off,
+                                                                                 random_cs_attack_on_off,
                                                                                  guassian_heuristic_on_off,
                                                                                  guassian_attack_count_dict)
             charging_schedule_list.append(charging_schedule)
@@ -177,7 +178,7 @@ if __name__ == "__main__":
 
         DataSave.save_ev_authentication_result(return_result_dict, return_pid_dict.items())
         DataSave.save_all_data(attack_config.get_scenario(), charging_schedule_list, ev_count_dict,
-                               guassian_attack_count_dict, random_attack_on_off, guassian_heuristic_on_off)
+                               guassian_attack_count_dict, random_cs_attack_on_off, guassian_heuristic_on_off)
         DataSave.save_sim_time(sim_time_delta.total_seconds(), attack_config.get_scenario(), start_sim_date,
                                end_sim_date)
 
