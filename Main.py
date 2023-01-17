@@ -37,8 +37,8 @@ def parameter_setting():
 
     start_date = datetime(year=2019, month=9, day=5)
     end_date = datetime(year=2019, month=9, day=6)
-    _attack_ev_random_count_min = 100
-    _attack_ev_random_count_max = 100
+    _attack_ev_random_count_min = 1000
+    _attack_ev_random_count_max = 1000
     _max_profiling_count = 3
     scenario = AttackConfig.attack_scenario_list(scenario_index)
     ret_param_list = [scenario, _attack_ev_random_count_min, _attack_ev_random_count_max, start_date, end_date,
@@ -150,9 +150,6 @@ if __name__ == "__main__":
             cs_process.start()
 
             if cs_id in profiling_target_cs_id_list:
-                while True:
-                    if cs_process.is_alive():
-                        break
                 measurement.start_perf_stat(cs_process.pid, 'cs_stat')
                 measurement.start_perf_top(cs_process.pid, 'cs_top', 'instructions')
                 measurement.start_perf_top(cs_process.pid, 'cs_top', 'branch')
@@ -203,6 +200,7 @@ if __name__ == "__main__":
         print(sim_time_delta)
         measurement.convert_perf_record_to_file()
         print('\nEnd EV CS')
+        exit(0)
     else:  # parent process
         os.close(read_pipe)
         wd = os.fdopen(write_pipe, "w")
@@ -210,8 +208,7 @@ if __name__ == "__main__":
         wd.write(str(port) + ' ' + str(os.getpid()))
         wd.close()
         V2G_Network().grid_server(port)
-        print('End Server')
         os.wait()
-        exit(0)
+        print('End Server')
 
     print('End Program')

@@ -8,6 +8,7 @@ end_thread_flag = True
 
 
 def multi_process_work_perf_top(param_pid, _dir, event):
+    # sim_flag.wait()
     print('Perf Top PID: ' + str(param_pid))
     os.system('perf top -d 1 --show-total-period -U -e ' + event + ' -p ' + str(param_pid) +
               ' --stdio > ./output/' + _dir + '/perf_top_' + event + '_' + str(param_pid) + '.txt')
