@@ -138,26 +138,27 @@ if __name__ == "__main__":
 
         print('-------------------------------- CS ID: [Normal EVs, Attack EVs] --------------------------------')
         print(ev_count_dict)
-        process_list = []
+        cs_process_list = []
         sim_flag = multiprocessing.Manager().Event()
         index = 0
         start_sim_time = datetime.now()
-
+        profiling_pid_list = []
         for cs_id, conn in installation_phase.get_cs_connection_dict().items():
-            process = Process(target=multi_process_work,
-                              args=(cs_id, conn, charging_schedule_list[index], attack_config, return_result_dict,
-                                    return_pid_dict, sim_flag,))
-            process.start()
+            cs_process = Process(target=multi_process_work,
+                                 args=(cs_id, conn, charging_schedule_list[index], attack_config, return_result_dict,
+                                       return_pid_dict, sim_flag,))
+            cs_process.start()
 
             if cs_id in profiling_target_cs_id_list:
                 while True:
-                    if process.is_alive():
+                    if cs_process.is_alive():
                         break
-                measurement.start_perf_stat(process.pid, 'cs_stat')
-                measurement.start_perf_top(process.pid, 'cs_top', 'instructions')
-                measurement.start_perf_top(process.pid, 'cs_top', 'branch')
-                measurement.start_perf_top(process.pid, 'cs_top', 'cycles')
-                measurement.start_perf_record(process.pid, 'cs_record')
+                measurement.start_perf_stat(cs_process.pid, 'cs_stat')
+                measurement.start_perf_top(cs_process.pid, 'cs_top', 'instructions')
+                measurement.start_perf_top(cs_process.pid, 'cs_top', 'branch')
+                measurement.start_perf_top(cs_process.pid, 'cs_top', 'cycles')
+                measurement.start_perf_record(cs_process.pid, 'cs_record')
+                profiling_pid_list.append(cs_process.pid)
 
             if index == len(installation_phase.get_cs_connection_dict()) - 1:
                 measurement.start_perf_stat(gs_pid, 'gs_stat')
@@ -165,20 +166,22 @@ if __name__ == "__main__":
                 measurement.start_perf_top(gs_pid, 'gs_top', 'branch')
                 measurement.start_perf_top(gs_pid, 'gs_top', 'cycles')
                 measurement.start_perf_record(gs_pid, 'gs_record')
+                profiling_pid_list.append(gs_pid)
                 sim_flag.set()
                 print('Measuring Start!')
 
             index += 1
-            process_list.append(process)
+            cs_process_list.append(cs_process)
 
-        for process in process_list:
-            process.join()
+        for cs_process in cs_process_list:
+            cs_process.join()
+
+        Measurement.kill_perf()
 
         for conn in installation_phase.get_cs_connection_dict().values():
             V2G_Network.end_cs_gs_connection(conn)
         V2G_Network.end_gs_server(port)
 
-        Measurement.kill_perf()
         time.sleep(last_delta)
         end_sim_time = datetime.now()
         sim_time_delta = end_sim_time - start_sim_time
@@ -198,7 +201,7 @@ if __name__ == "__main__":
 
         print('-------------------------------------- Consumed Simulation Time --------------------------------------')
         print(sim_time_delta)
-        # measurement.convert_perf_record_to_file()
+        measurement.convert_perf_record_to_file()
         print('\nEnd EV CS')
     else:  # parent process
         os.close(read_pipe)
@@ -211,6 +214,4 @@ if __name__ == "__main__":
         os.wait()
         exit(0)
 
-    # Measurement.kill_process(gs_pid)
     print('End Program')
-
