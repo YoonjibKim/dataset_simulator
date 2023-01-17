@@ -31,14 +31,14 @@ def multi_process_work(param_cs_id, param_conn, param_charging_schedule, param_a
 
 def parameter_setting():
     # ['no attack', 'correct ID', 'wrong ID', 'wrong ev timestamp', 'wrong cs timestamp']
-    scenario_index = 1
-    _random_cs_attack_on_off = False
-    _guassian_heuristic_on_off = False
+    scenario_index = 0
+    _random_cs_attack_on_off = True
+    _guassian_heuristic_on_off = True
 
     start_date = datetime(year=2019, month=9, day=5)
-    end_date = datetime(year=2019, month=9, day=6)
-    _attack_ev_random_count_min = 1000
-    _attack_ev_random_count_max = 1000
+    end_date = datetime(year=2020, month=9, day=6)
+    _attack_ev_random_count_min = 2000
+    _attack_ev_random_count_max = 2000
     _max_profiling_count = 3
     scenario = AttackConfig.attack_scenario_list(scenario_index)
     ret_param_list = [scenario, _attack_ev_random_count_min, _attack_ev_random_count_max, start_date, end_date,
