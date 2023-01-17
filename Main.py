@@ -36,7 +36,7 @@ def parameter_setting():
     _guassian_heuristic_on_off = False
 
     start_date = datetime(year=2019, month=9, day=5)
-    end_date = datetime(year=2020, month=9, day=6)
+    end_date = datetime(year=2019, month=9, day=6)
     _attack_ev_random_count_min = 100
     _attack_ev_random_count_max = 100
     _max_profiling_count = 3
@@ -108,11 +108,6 @@ if __name__ == "__main__":
 
         # authentication
         print('----------------------------------- EV Authentication Result -----------------------------------')
-        process_list = []
-        process_count = 0
-        sim_flag = multiprocessing.Manager().Event()
-
-        charging_schedule_list = []
 
         if guassian_heuristic_on_off:
             guassian_attack_count_dict, mean, std = attack_config.get_normal_distribution(scheduled_charging_list)
@@ -121,6 +116,7 @@ if __name__ == "__main__":
             guassian_attack_count_dict = 0
 
         ev_count_dict = {}
+        charging_schedule_list = []
         charging_schedule_count_list = []
         for cs_id, conn in installation_phase.get_cs_connection_dict().items():
             charging_schedule = installation_phase.get_scheduled_charging_of_normal_evs(cs_id, scheduled_charging_list,
@@ -142,26 +138,28 @@ if __name__ == "__main__":
 
         print('-------------------------------- CS ID: [Normal EVs, Attack EVs] --------------------------------')
         print(ev_count_dict)
-        start_sim_time = datetime.now()
+        process_list = []
+        sim_flag = multiprocessing.Manager().Event()
         index = 0
+        start_sim_time = datetime.now()
+
         for cs_id, conn in installation_phase.get_cs_connection_dict().items():
             process = Process(target=multi_process_work,
                               args=(cs_id, conn, charging_schedule_list[index], attack_config, return_result_dict,
                                     return_pid_dict, sim_flag,))
             process.start()
+
             if cs_id in profiling_target_cs_id_list:
                 while True:
                     if process.is_alive():
                         break
-
                 measurement.start_perf_stat(process.pid, 'cs_stat')
                 measurement.start_perf_top(process.pid, 'cs_top', 'instructions')
                 measurement.start_perf_top(process.pid, 'cs_top', 'branch')
                 measurement.start_perf_top(process.pid, 'cs_top', 'cycles')
                 measurement.start_perf_record(process.pid, 'cs_record')
-            index += 1
-            process_list.append(process)
-            if process_count == len(installation_phase.get_cs_connection_dict()) - 1:
+
+            if index == len(installation_phase.get_cs_connection_dict()) - 1:
                 measurement.start_perf_stat(gs_pid, 'gs_stat')
                 measurement.start_perf_top(gs_pid, 'gs_top', 'instructions')
                 measurement.start_perf_top(gs_pid, 'gs_top', 'branch')
@@ -169,11 +167,16 @@ if __name__ == "__main__":
                 measurement.start_perf_record(gs_pid, 'gs_record')
                 sim_flag.set()
                 print('Measuring Start!')
-            else:
-                process_count += 1
+
+            index += 1
+            process_list.append(process)
 
         for process in process_list:
             process.join()
+
+        for conn in installation_phase.get_cs_connection_dict().values():
+            V2G_Network.end_cs_gs_connection(conn)
+        V2G_Network.end_gs_server(port)
 
         Measurement.kill_perf()
         time.sleep(last_delta)
@@ -195,7 +198,7 @@ if __name__ == "__main__":
 
         print('-------------------------------------- Consumed Simulation Time --------------------------------------')
         print(sim_time_delta)
-        measurement.convert_perf_record_to_file()
+        # measurement.convert_perf_record_to_file()
         print('\nEnd EV CS')
     else:  # parent process
         os.close(read_pipe)
@@ -205,8 +208,9 @@ if __name__ == "__main__":
         wd.close()
         V2G_Network().grid_server(port)
         print('End Server')
+        os.wait()
         exit(0)
 
-    Measurement.kill_process(gs_pid)
+    # Measurement.kill_process(gs_pid)
     print('End Program')
 

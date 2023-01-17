@@ -87,6 +87,32 @@ class Measurement:
                 os.system('perf report -i ./output/cs_record/perf_record_' + str(target_pid) +
                           ' > ./output/cs_record/perf_record_' + str(target_pid) + '.txt')
 
+    def end_profiling_process(self, target_pid):
+        if target_pid in self.__process_perf_stat_dict:
+            profiling_process = self.__process_perf_stat_dict[target_pid]
+            profiling_process.terminate()
+            print('Perf stat: ' + str(target_pid) + ' has been terminated.')
+
+        if target_pid in self.__process_perf_record_dict:
+            profiling_process = self.__process_perf_record_dict[target_pid]
+            profiling_process.terminate()
+            print('Perf record: ' + str(target_pid) + ' has been terminated.')
+
+        if target_pid in self.__process_perf_top_instructions_dict:
+            profiling_process = self.__process_perf_top_instructions_dict[target_pid]
+            profiling_process.terminate()
+            print('Perf top instructions: ' + str(target_pid) + ' has been terminated.')
+
+        if target_pid in self.__process_perf_top_branch_dict:
+            profiling_process = self.__process_perf_top_branch_dict[target_pid]
+            profiling_process.terminate()
+            print('Perf top branch: ' + str(target_pid) + ' has been terminated.')
+
+        if target_pid in self.__process_perf_top_cycles_dict:
+            profiling_process = self.__process_perf_top_branch_dict[target_pid]
+            profiling_process.terminate()
+            print('Perf top cycles: ' + str(target_pid) + ' has been terminated.')
+
     @classmethod
     def kill_process(cls, pid):
         os.system('kill -9 ' + str(pid))

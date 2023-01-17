@@ -3,11 +3,12 @@ import threading
 
 from Security import Installation, Authentication
 
-gs_side_cs_database = {}
-gs_side_id_key_database = {}
+global_gs_side_cs_database = {}
+global_gs_side_id_key_database = {}
 
 # installation
-gs_side_installation_ev_cs_database = {' ': [' ', ' ', ' ']}
+global_gs_side_installation_ev_cs_database = {' ': [' ', ' ', ' ']}
+global_server_finish_flag = False
 
 
 class V2G_Network:
@@ -16,16 +17,18 @@ class V2G_Network:
 
     @classmethod
     def get_open_port(cls):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(("", 0))
-        s.listen(1)
-        port = s.getsockname()[1]
-        s.close()
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind(("", 0))
+        server.listen(1)
+        port = server.getsockname()[1]
+        server.close()
         return port
 
     @classmethod
     def __handle_client(cls, conn):
-        global gs_side_installation_ev_cs_database
+        global global_gs_side_installation_ev_cs_database
+        global global_server_finish_flag
+
         cs_id = None
         challenge = None
 
@@ -43,7 +46,7 @@ class V2G_Network:
                     response = recv_data_list[1]
                     if int(challenge) + cls.__puf_value == int(response):
                         cs_loc = recv_data_list[2]
-                        gs_side_cs_database[cs_id] = [challenge, response, cs_loc]
+                        global_gs_side_cs_database[cs_id] = [challenge, response, cs_loc]
                         send_data = 'cs_inst_success'
                     else:
                         send_data = 'cs_inst_fail'
@@ -51,45 +54,67 @@ class V2G_Network:
                     ev_id = recv_data_list[1]
                     cs_id = recv_data_list[2]
 
-                    if ev_id in gs_side_installation_ev_cs_database:
+                    if ev_id in global_gs_side_installation_ev_cs_database:
                         send_data = 'ev_inst_fail'
                     else:
                         hex_key, hex_ev_id = Installation.gs_generate_ev_id_and_key(ev_id)
-                        gs_side_id_key_database[hex_ev_id] = hex_key
-                        gs_side_installation_ev_cs_database[ev_id] = [cs_id, hex_key, hex_ev_id]
+                        global_gs_side_id_key_database[hex_ev_id] = hex_key
+                        global_gs_side_installation_ev_cs_database[ev_id] = [cs_id, hex_key, hex_ev_id]
                         send_data = 'ev_inst_success ' + str(hex_ev_id) + ' ' + str(hex_key) + ' ' + ev_id + ' ' + cs_id
                 elif recv_data_list[0] == 'ev_auth_1':
                     send_data = \
-                        Authentication.checking_evidtsid(recv_data_list, gs_side_cs_database, gs_side_id_key_database)
+                        Authentication.checking_evidtsid(recv_data_list, global_gs_side_cs_database, global_gs_side_id_key_database)
+                elif recv_data_list[0] == 'client_terminate':
+                    conn.close()
+                    break
+                elif recv_data_list[0] == 'server_terminate':
+                    conn.close()
+                    global_server_finish_flag = True
+                    break
 
                 conn.sendall(bytes(send_data, 'utf-8'))
 
     @classmethod
     def grid_server(cls, port):
+        global global_server_finish_flag
+
         print('------------------------------------- GS Installation -------------------------------------')
         print('Server IP: ' + str(cls.__host_ip))
         print('Server Port: ' + str(port))
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s.bind((cls.__host_ip, port))
-            s.listen(1000)
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind((cls.__host_ip, port))
+        server.listen(1000)
 
-            while True:
-                try:
-                    conn, addr = s.accept()
-                except KeyboardInterrupt:
-                    s.close()
+        while True:
+            server.settimeout(0.01)
+            try:
+                conn, addr = server.accept()
+            except socket.timeout:
+                if global_server_finish_flag:
+                    server.close()
                     break
+            else:
+                thread = threading.Thread(target=cls.__handle_client, args=(conn,))
+                thread.daemon = True
+                thread.start()
 
-                t = threading.Thread(target=cls.__handle_client, args=(conn,))
-                t.daemon = True
-                t.start()
+    @classmethod
+    def end_cs_gs_connection(cls, conn):
+        send_data = 'client_terminate'
+        conn.sendall(bytes(send_data, 'utf-8'))
+
+    @classmethod
+    def end_gs_server(cls, port):
+        conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        conn.connect((cls.__host_ip, port))
+        send_data = 'server_terminate'
+        conn.sendall(bytes(send_data, 'utf-8'))
 
     @classmethod
     def installing_cs(cls, port, cs_id):
         conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         conn.connect((cls.__host_ip, port))
-
         send_data = 'cs_inst_1 ' + cs_id
         conn.sendall(bytes(send_data, 'utf-8'))
         recv_data = conn.recv(1024).decode('utf-8')
