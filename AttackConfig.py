@@ -170,11 +170,6 @@ class AttackConfig:
         return cls.__attack_scenario_list[index]
 
     @classmethod
-    def __calculate_gaussian(cls, data, mean, std):
-        probability = (1.0 / (np.sqrt(2 * np.pi))) * np.exp(-1 * (((data - mean)/std) ** 2))
-        return probability
-
-    @classmethod
     def get_normal_distribution(cls, scheduled_charging_list, alpha=10):
         temp_cs_id_list = []
         for record in scheduled_charging_list:
