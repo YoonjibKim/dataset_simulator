@@ -240,11 +240,3 @@ class DataSave:
             outer_sec_delta_list[cs_id] = inner_sec_delta_list
 
         return outer_sec_delta_list
-
-        # 2) Cycle: GS CPU 초록색 + 빨간색 라이브러리 오버헤드 측정 - Z축: 라이브러리 이름, X축: 시퀀스, Y축: 오버헤드
-        #   네트워크 관련 특정 심볼들
-        # 3) Instructions: GS CPU 초록색 + 빨간색 라이브러리 오버헤드 측정 - Z축: 라이브러리 이름, X축: 시퀀스, Y축: 오버헤드
-        #   네트워크 관련 특정 심볼들
-        # 4) Branch: Instructions: GS CPU 초록색 + 빨간색 라이브러리 오버헤드 측정 - Z축: 라이브러리 이름, X축: 시퀀스, Y축: 오버헤드
-        #   네트워크 관련 특정 심볼들
-        # 5) 사이클 기반 상위 10% 오버헤드
